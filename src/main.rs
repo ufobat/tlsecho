@@ -21,10 +21,11 @@ fn main() {
     let server = listener.incoming().for_each(
         |(stream, _remote_addr)| {
             let acceptor = acceptor.clone();
-            handle.spawn(move || {
-                let stream = acceptor.accept(stream).unwrap();
-                // handle_client(stream);
-            });
+            let stream = acceptor.accept_async(stream); // Future
+            // each stream into a own thread?
+            // handle_client(stream);
+
+            // return a Future
         }
     );
     core.run(server).unwrap();
