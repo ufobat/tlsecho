@@ -1,0 +1,10 @@
+[package]
+name = "tlsecho"
+version = "0.1.0"
+authors = ["Martin Barth <martin@senfdax.de>"]
+
+[dependencies]
+openssl = "0.10.5"
+tokio-core = "0.1"
+tokio-openssl = "0.2"
+futures = "0.1.18"
