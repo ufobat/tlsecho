@@ -7,9 +7,10 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
 use std::sync::Arc;
 // use std::thread;
 use tokio::net::{TcpListener, TcpStream};
-// use tokio::uds
+use tokio_uds::UnixStream;
 use tokio::prelude::*;
 use tokio_openssl::{SslAcceptorExt, AcceptAsync};
+use tokio::reactor::Handle;
 
 fn main() {
     let listening_addr = "0.0.0.0:8443".parse().unwrap();
@@ -37,6 +38,9 @@ fn handle_client(stream: AcceptAsync<tokio::net::TcpStream>) {
     // each stream into a own thread?
 
     let promise = stream.and_then(|tls_stream| {
+        let (reader, writer) = tls_stream.split();
+        let handle = Handle::current(); // for the UNIX sockets
+        let uds = UnixStream::connect("/home/martin/uds", &handle).unwrap();
         Ok(())
     }).map_err(
         |err| {
