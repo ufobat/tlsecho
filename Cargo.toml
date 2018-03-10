@@ -7,3 +7,4 @@ authors = ["Martin Barth <martin@senfdax.de>"]
 openssl = "0.10.5"
 tokio = "0.1.3"
 tokio-openssl = "0.2"
+tokio-uds = "0.1"

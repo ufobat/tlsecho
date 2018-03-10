@@ -1,11 +1,13 @@
 extern crate openssl;
 extern crate tokio;
 extern crate tokio_openssl;
+extern crate tokio_uds;
 
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
 use std::sync::Arc;
-use std::thread;
+// use std::thread;
 use tokio::net::{TcpListener, TcpStream};
+// use tokio::uds
 use tokio::prelude::*;
 use tokio_openssl::{SslAcceptorExt, AcceptAsync};
 
@@ -16,25 +18,33 @@ fn main() {
     let acceptor = Arc::new(get_acceptor());
     let server = listener.incoming().for_each(
         move |stream| {
-            let acceptor = acceptor.clone();
+            // let acceptor = acceptor.clone(); // theads
             let stream = acceptor.accept_async(stream); // Future
 
-            // each stream into a own thread?
-            // thread::spawn(move || handle_client(stream) );
+            handle_client(stream);
 
             Ok(())
         }
     ).map_err(
         |err| {
-            println!("error while accepting: {:?}", err);
+            println!("error while listening: {:?}", err);
         }
     );
     tokio::run(server);
 }
 
 fn handle_client(stream: AcceptAsync<tokio::net::TcpStream>) {
+    // each stream into a own thread?
 
+    let promise = stream.and_then(|tls_stream| {
+        Ok(())
+    }).map_err(
+        |err| {
+            println!("error while accepting: {:?}", err);
+        }
+    );
     // unix socket öffnen
+    tokio::spawn(promise);
 }
 
 fn get_acceptor() -> SslAcceptor {
