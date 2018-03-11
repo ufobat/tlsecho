@@ -3,14 +3,14 @@ extern crate tokio;
 extern crate tokio_openssl;
 extern crate tokio_uds;
 
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod, SslStream};
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use std::sync::Arc;
 // use std::thread;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpListener;
+use tokio::io;
 use tokio_uds::UnixStream;
 use tokio::prelude::*;
 use tokio_openssl::{SslAcceptorExt, AcceptAsync};
-use tokio::reactor::Handle;
 
 fn main() {
     let listening_addr = "0.0.0.0:8443".parse().unwrap();
@@ -19,6 +19,8 @@ fn main() {
     let acceptor = Arc::new(get_acceptor());
     let server = listener.incoming().for_each(
         move |stream| {
+            // TODO: accepting invokes the verify_callback
+            // so this should be in a own thread
             // let acceptor = acceptor.clone(); // theads
             let stream = acceptor.accept_async(stream); // Future
 
@@ -35,12 +37,24 @@ fn main() {
 }
 
 fn handle_client(stream: AcceptAsync<tokio::net::TcpStream>) {
-    // each stream into a own thread?
 
     let promise = stream.and_then(|tls_stream| {
-        let (reader, writer) = tls_stream.split();
-        let handle = Handle::current(); // for the UNIX sockets
-        let uds = UnixStream::connect("/home/martin/uds", &handle).unwrap();
+        let (tls_reader, tls_writer) = tls_stream.split();
+        let uds = UnixStream::connect("/home/martin/uds").unwrap();
+        let (uds_reader, uds_writer) = uds.split();
+        let sender = io::copy(tls_reader, uds_writer).map(|_| {
+            // nothing
+        }).map_err(
+                |err| { println!("IO Err: {}", err) }
+        );
+        let receiver = io::copy(uds_reader, tls_writer).map(|_| {
+            // nothing
+        }).map_err(
+            |err| { println!("IO Err: {}", err) }
+        );
+        // TODO? on the threadpool
+        tokio::spawn(sender);
+        tokio::spawn(receiver);
         Ok(())
     }).map_err(
         |err| {
